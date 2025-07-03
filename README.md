@@ -1,4 +1,4 @@
-Delite_FuturesDB
+# Delite_FuturesDB
 
 A complete SQL-based database project simulating a futures market platform for educational and analytical use. Designed with relational integrity, automation, and scalable querying in mind.
 
