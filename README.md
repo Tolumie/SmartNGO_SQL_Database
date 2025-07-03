@@ -1,4 +1,4 @@
-# Delite_FuturesDB
+Delite_FuturesDB
 
 A complete SQL-based database project simulating a futures market platform for educational and analytical use. Designed with relational integrity, automation, and scalable querying in mind.
 
@@ -7,7 +7,33 @@ A complete SQL-based database project simulating a futures market platform for e
 
 📘 Project Overview
 
-Delite_FuturesDB is a structured relational database for managing members, staff, project bookings, payments, notifications, and participation feedback within a mock NGO or initiative offering futures-based sustainability projects.
+Delite_FuturesDB was developed as a database solution for Delite Futures Initiative, a team-driven NGO that previously relied on manual, spreadsheet-based methods to track and manage key operational data — including member registration, project participation, bookings, and payments.
+
+Due to increasing complexity, data loss risk, and inefficiencies in their manual process, the team proposed a centralized app to manage all dealings — and I was tasked with architecting the core database to power that app.
+
+This SQL project provides:
+
+A fully normalized relational database
+
+Data structures for handling admin/staff/member roles
+
+Tables for managing projects, payments, bookings, and feedback
+
+Automated triggers and procedures to reduce repetitive logic
+
+Built-in support for system logs like login attempts and notifications
+
+
+The result is a robust, scalable backend database that ensures Delite can migrate from manual handling to a fully integrated system, with clean data pipelines and maintainable logic for future app development.
+
+This project serves as the foundation for:
+
+Web and mobile app integration
+
+Advanced analytics and reporting
+
+System integrity and future scalability
+
 
 
 ---
