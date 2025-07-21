@@ -115,9 +115,17 @@ Dive into the `01_SQL_Database_Core/` folder to see the database design and func
 * `queries.sql`: Examples of powerful analytical and operational queries.
 
 **Visualizing the System:**
-* **[Entity Relationship Diagram (ERD)](./01_SQL_Database_Core/diagrams/erd_diagram.png)**: Illustrates the tables and their relationships...
-* **[Use Case Diagram](./01_SQL_Database_Core/diagrams/use_case_diagram.png)**: Shows how different user roles...
-* **[Activity Diagram](./01_SQL_Database_Core/diagrams/activity_diagram.png)**: Visualizes key workflows...
+* **Entity Relationship Diagram (ERD):**
+    ![ERD Diagram](./01_SQL_Database_Core/diagrams/erd_diagram.png)
+    *Illustrates the tables and their relationships, serving as the blueprint for the database structure. This was crucial for ensuring data integrity and optimal relational design.*
+
+* **Use Case Diagram:**
+    ![Use Case Diagram](./01_SQL_Database_Core/diagrams/use_case_diagram.jpg)
+    *Shows how different user roles (Admins, Staff, Members, Bank) interact with the system, helping define the functional requirements of the database. This guided the design to support all necessary user workflows.*
+
+* **Activity Diagram:**
+    ![Activity Diagram](./01_SQL_Database_Core/diagrams/activity_diagram.jpg)
+    *Visualizes key workflows such as user registration, booking flow, and payment processing, allowing for the design of efficient, automated processes within the database. This helped identify and streamline operational sequences.*
 ---
 
 ## 🤝 Contributions & License
