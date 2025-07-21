@@ -117,6 +117,7 @@ Dive into the `01_SQL_Database_Core/` folder to see the database design and func
 **Visualizing the System:**
 * **Entity Relationship Diagram (ERD):**
     ![ERD Diagram](./01_SQL_Database_Core/diagrams/erd_diagram.png)
+
     *Illustrates the tables and their relationships, serving as the blueprint for the database structure. This was crucial for ensuring data integrity and optimal relational design.*
 
 * **Use Case Diagram:**
