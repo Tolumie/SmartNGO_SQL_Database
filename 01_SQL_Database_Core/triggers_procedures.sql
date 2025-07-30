@@ -1,6 +1,15 @@
--- 3. Create Triggers for Automatic Updates or Actions
+
+-- 3. Triggers for Automatic Updates or Actions
+-- This section defines triggers that automatically execute SQL statements
+-- in response to specific events (INSERT, UPDATE, DELETE) on a table,
+-- ensuring data consistency and automating routine tasks.
 
 -- Trigger for updating the payment status of a booking when a payment is made
+-- This trigger automatically sets the 'PaymentStatus' in the 'Bookings' table to 'Paid'
+-- after a new payment record is successfully inserted into the 'Payments' table.
+-- It targets the specific booking by matching the 'MemberID' and 'ProjectCode'
+-- from the new payment. Crucially, it only updates if the 'PaymentStatus' was
+-- previously 'Unpaid', preventing redundant updates.
 DELIMITER $$
 CREATE TRIGGER UpdatePaymentStatus
 AFTER INSERT ON Payments
@@ -8,50 +17,102 @@ FOR EACH ROW
 BEGIN
     UPDATE Bookings
     SET PaymentStatus = 'Paid'
-    WHERE MemberID = NEW.MemberID AND ProjectCode = NEW.ProjectCode;
+    WHERE MemberID = NEW.MemberID
+      AND ProjectCode = NEW.ProjectCode
+      AND PaymentStatus = 'Unpaid'; -- Ensures only previously unpaid bookings are marked paid
 END$$
 DELIMITER ;
 
--- Trigger for updating the number of participants when a new booking is made
+-- Trigger for incrementing the number of participants when a new booking is made
+-- This trigger efficiently maintains the 'CurrentParticipants' count in the 'Projects'
+-- table. Whenever a new record is inserted into the 'Bookings' table (indicating
+-- a new participant), this trigger automatically increments the 'CurrentParticipants'
+-- value for the corresponding project by 1. This method is highly performant
+-- compared to recalculating the count from scratch.
 DELIMITER $$
-CREATE TRIGGER UpdateParticipantsCount
+CREATE TRIGGER UpdateParticipantsCount_Insert
 AFTER INSERT ON Bookings
 FOR EACH ROW
 BEGIN
-    DECLARE current_count INT;
-    -- Count the number of bookings for the project
-    SELECT COUNT(*) INTO current_count FROM Bookings WHERE ProjectCode = NEW.ProjectCode;
-    -- Update the 'CurrentParticipants' in Projects table
     UPDATE Projects
-    SET CurrentParticipants = current_count
+    SET CurrentParticipants = CurrentParticipants + 1
     WHERE ProjectCode = NEW.ProjectCode;
 END$$
 DELIMITER ;
 
--- 4. Create Stored Procedures for Reusable Queries
+-- Trigger for decrementing the number of participants when a booking is deleted
+-- This essential trigger complements 'UpdateParticipantsCount_Insert' to ensure
+-- the 'CurrentParticipants' count in the 'Projects' table remains accurate.
+-- When a booking record is deleted from the 'Bookings' table (e.g., a cancellation),
+-- this trigger automatically decrements the corresponding project's participant
+-- count by 1, reflecting the change in active participants.
+DELIMITER $$
+CREATE TRIGGER UpdateParticipantsCount_Delete
+AFTER DELETE ON Bookings
+FOR EACH ROW
+BEGIN
+    UPDATE Projects
+    SET CurrentParticipants = CurrentParticipants - 1
+    WHERE ProjectCode = OLD.ProjectCode;
+END$$
+DELIMITER ;
+--
+-- 4. Stored Procedures for Reusable Queries
+-- This section defines reusable SQL routines that encapsulate specific business logic.
 
 -- Stored procedure to add a new project
+-- This procedure safely adds a new project to the 'Projects' table.
+-- It includes crucial validation: it checks if the 'leader_id' provided
+-- corresponds to an existing 'StaffID' in the 'Staff' table. If the leader
+-- does not exist, it prevents the insertion and signals a clear SQL error
+-- (SQLSTATE '45000') to maintain data integrity.
 DELIMITER $$
-CREATE PROCEDURE AddNewProject(IN project_name VARCHAR(100), IN description TEXT, IN schedule DATE, IN max_participants INT, IN leader_id INT)
+CREATE PROCEDURE AddNewProject(
+    IN project_name VARCHAR(100),
+    IN description TEXT,
+    IN schedule DATE,
+    IN max_participants INT,
+    IN leader_id INT
+)
 BEGIN
-    INSERT INTO Projects (ProjectName, Description, Schedule, MaxParticipants, LeaderID)
-    VALUES (project_name, description, schedule, max_participants, leader_id);
+    IF EXISTS (SELECT 1 FROM Staff WHERE StaffID = leader_id) THEN
+        INSERT INTO Projects (ProjectName, Description, Schedule, MaxParticipants, LeaderID)
+        VALUES (project_name, description, schedule, max_participants, leader_id);
+    ELSE
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'LeaderID does not exist in the Staff table. Project cannot be added.';
+    END IF;
 END$$
 DELIMITER ;
 
 -- Stored procedure to get all members' payment statuses for a specific project
+-- This procedure retrieves comprehensive payment-related information for members
+-- associated with a given project. It fetches member names, payment details
+-- (amount, payment date, payment method), and the current payment status from
+-- the 'Bookings' table. The joins between 'Payments', 'Members', and 'Bookings'
+-- are carefully constructed, specifically including 'ProjectCode' in the
+-- 'Bookings' join condition (B.ProjectCode = P.ProjectCode) to ensure that
+-- the retrieved payment status accurately reflects the booking for the *specific* project.
 DELIMITER $$
 CREATE PROCEDURE GetProjectPayments(IN project_id INT)
 BEGIN
-    SELECT Members.Name, Payments.Amount, Payments.PaymentDate, Payments.PaymentMethod, Bookings.PaymentStatus
-    FROM Payments
-    JOIN Members ON Payments.MemberID = Members.ID
-    JOIN Bookings ON Bookings.MemberID = Members.ID
-    WHERE Payments.ProjectCode = project_id;
+    SELECT
+        M.Name,
+        P.Amount,
+        P.PaymentDate,
+        P.PaymentMethod,
+        B.PaymentStatus
+    FROM Payments AS P
+    JOIN Members AS M ON P.MemberID = M.ID
+    JOIN Bookings AS B ON B.MemberID = M.ID AND B.ProjectCode = P.ProjectCode -- Ensures payment status is linked to the correct project booking
+    WHERE P.ProjectCode = project_id;
 END$$
 DELIMITER ;
 
 -- Stored procedure to calculate the total earnings for a project based on payments
+-- This procedure efficiently calculates the sum of all 'Amount' values from the
+-- 'Payments' table that are associated with a given 'ProjectCode'. The result
+-- provides the total financial earnings generated by that specific project.
 DELIMITER $$
 CREATE PROCEDURE CalculateTotalEarnings(IN project_id INT)
 BEGIN
@@ -61,62 +122,3 @@ BEGIN
 END$$
 DELIMITER ;
 
-
-/*
-Trigger for updating the payment status:
-
-The Payments table references MemberID and ProjectCode. Ensure Bookings uses the same combination to identify bookings.
--- Trigger to handle cases where multiple bookings exist for the same member and project.
-*/
-
-DELIMITER $$
-CREATE TRIGGER UpdatePaymentStatus
-AFTER INSERT ON Payments
-FOR EACH ROW
-BEGIN
-    UPDATE Bookings
-    SET PaymentStatus = 'Paid'
-    WHERE MemberID = NEW.MemberID AND ProjectCode = NEW.ProjectCode AND PaymentStatus = 'Unpaid';
-END$$
-DELIMITER ;
-Trigger for updating participants count:
-
-Update CurrentParticipants in the Projects table by incrementing the value instead of recalculating, for better efficiency.
-Modified Trigger:
-
-
-DELIMITER $$
-CREATE TRIGGER UpdateParticipantsCount
-AFTER INSERT ON Bookings
-FOR EACH ROW
-BEGIN
-    UPDATE Projects
-    SET CurrentParticipants = CurrentParticipants + 1
-    WHERE ProjectCode = NEW.ProjectCode;
-END$$
-DELIMITER ;
-Modifications for Stored Procedures
-Adding a New Project:
-
-Ensure LeaderID references an existing StaffID in the Staff table.
-Modified Procedure:
-
-
-DELIMITER $$
-CREATE PROCEDURE AddNewProject(
-    IN project_name VARCHAR(100), 
-    IN description TEXT, 
-    IN schedule DATE, 
-    IN max_participants INT, 
-    IN leader_id INT
-)
-BEGIN
-    IF EXISTS (SELECT 1 FROM Staff WHERE StaffID = leader_id) THEN
-        INSERT INTO Projects (ProjectName, Description, Schedule, MaxParticipants, LeaderID)
-        VALUES (project_name, description, schedule, max_participants, leader_id);
-    ELSE
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'LeaderID does not exist';
-    END IF;
-END$$
-DELIMITER ;
